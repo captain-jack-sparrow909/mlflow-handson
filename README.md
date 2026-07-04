@@ -45,3 +45,53 @@
     5000 -> default port on which mlflow run
     0.0.0.0 -> binding the port to the localhost
 
+
+# production ready setup using PostgreSQL and kubernetes:
+
+## steps:
+
+### 1. setting up PostreSQL instance on AWS RDS:
+    to make the data persistent, as for just Sqlite, it can get lost if kubernetes pod crashed
+    if you're not exposing this DB through EC2 or Lambda then you need to make this publically available in network and connectivity, 
+    otherwise it won't connect.
+
+### 2. setting up a dedicated mlflow db and user on PostreSQL:
+    to have things properly organized, download PostgreSQL client or brew install psql
+    and then run -> psql -h host-link-from-aws -p 5432 -U postgres
+
+    once DB is connected:
+    creating DB and user access:
+        ``` CREATE DATABASE mlflow;
+            CREATE USER mlflow_user WITH PASSWORD 'your_secure_password';
+            GRANT ALL PRIVILEGES ON DATABASE mlflow TO mlflow_user;
+            GRANT ALL PRIVILEGES ON SCHEMA public TO mlflow_user;
+        ```
+    
+
+### 3. running mlflow server on kubernetes cluster and be able to reach the PostgreSQL DB:
+    data should go from the ML Flow to the DB
+
+    kind create cluster --name=production-mlflow-setup 
+
+    if not already, then below step is needed once:
+    helm repo add community-charts https://community-charts.github.io/helm-charts
+    helm repo update
+
+    creating namespace:
+    kubectl create ns mlflow       used in below command
+
+    and then, make necessary changes:
+
+    helm install mlflow community-charts/mlflow \
+    --namespace mlflow \
+    --set backendStore.databaseMigration=true \
+    --set backendStore.postgres.enabled=true \
+    --set backendStore.postgres.host=your-postgres-host \
+    --set backendStore.postgres.port=5432 \
+    --set backendStore.postgres.database=mlflow \
+    --set backendStore.postgres.user=mlflow_user \
+    --set backendStore.postgres.password=your_secure_password
+
+
+    lastly, port forwarding:
+    kubectl -n mlflow port-forward pod/podName 7004:5000 --address 0.0.0.0
