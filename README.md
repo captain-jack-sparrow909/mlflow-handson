@@ -95,3 +95,16 @@
 
     lastly, port forwarding:
     kubectl -n mlflow port-forward pod/podName 7004:5000 --address 0.0.0.0
+
+
+
+# connecting to your ML Flow:
+
+    python3.12
+    import mlflow
+    mlflow.set_tracking_uri("http://localhost:7006")
+    mlflow.set_experiment("my-first-experiment-mlflow")    #after entering this line and you check on your ML Flow UI, you should be able to see this experiment
+
+    better to do the above in a script than a CLI, 
+    you can use mlflow.start_run(), mlflow.log_param() and mlflow.log_metric() methods for observability on ML Flow UI
+    
